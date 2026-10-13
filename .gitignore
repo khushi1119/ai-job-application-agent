@@ -46,3 +46,43 @@ Thumbs.db
 .vscode/*
 !.vscode/extensions.json
 .idea/
+
+# Python virtual environment & bytecode
+.venv/
+venv/
+**/__pycache__/
+*.py[cod]
+
+# Environment files and secrets
+.env*
+!.env.example
+**/.env*
+!**/.env.example
+
+# Dependencies in all project folders
+node_modules/
+
+# Frontend build output
+client/dist/
+
+# Python environments and cache
+.venv/
+ml/.venv/
+__pycache__/
+*.py[cod]
+
+# Local AI tool configuration
+.gemini/
+
+# Coverage and logs
+coverage/
+*.log
+
+# Local Antigravity workspace and scratch files
+
+.gemini/
+brain/
+
+server/inspect_all_full_profiles.mjs
+server/scratch_inspect_recent_profile.mjs
+server/test_save_profile.mjs
