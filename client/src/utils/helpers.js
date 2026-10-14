@@ -242,33 +242,69 @@ export const formatJobFreshness = (lastVerifiedAt) => {
   }
 };
 
+export const PRODUCTION_RENDER_API_URL = 'https://ai-job-application-agent-y2tj.onrender.com/api';
+
 /**
  * Normalizes the API base URL to ensure requests correctly target the
  * backend API root (e.g. appending '/api' if omitted).
+ * Ensures that production requests always target the Render backend API,
+ * never the Vercel frontend origin.
+ *
  * Handles:
- *  - 'https://example.onrender.com' -> 'https://example.onrender.com/api'
- *  - 'https://example.onrender.com/' -> 'https://example.onrender.com/api'
- *  - 'https://example.onrender.com/api' -> 'https://example.onrender.com/api'
- *  - 'https://example.onrender.com/api/' -> 'https://example.onrender.com/api'
+ *  - 'https://ai-job-application-agent-y2tj.onrender.com' -> 'https://ai-job-application-agent-y2tj.onrender.com/api'
+ *  - 'https://ai-job-application-agent-y2tj.onrender.com/' -> 'https://ai-job-application-agent-y2tj.onrender.com/api'
+ *  - 'https://ai-job-application-agent-y2tj.onrender.com/api' -> 'https://ai-job-application-agent-y2tj.onrender.com/api'
  *  - 'http://localhost:5000' -> 'http://localhost:5000/api'
  *  - 'http://localhost:5000/api' -> 'http://localhost:5000/api'
- *  - undefined / empty / '/' -> '/api'
- *  - '/api' / '/api/' -> '/api'
+ *  - undefined / empty in production -> 'https://ai-job-application-agent-y2tj.onrender.com/api'
+ *  - any '*.vercel.app' URL mistakenly passed -> 'https://ai-job-application-agent-y2tj.onrender.com/api'
+ *  - undefined / empty in development -> '/api' (Vite dev proxy)
  *
  * @param {string} [rawUrl] - Base URL configured in environment
+ * @param {Object} [options] - Optional override { isProduction: boolean }
  * @returns {string} Normalized API base URL
  */
-export const resolveApiBaseUrl = (rawUrl) => {
+export const resolveApiBaseUrl = (rawUrl, options = {}) => {
+  const isProd =
+    typeof options.isProduction === 'boolean'
+      ? options.isProduction
+      : (typeof import.meta !== 'undefined' && import.meta.env?.PROD) ||
+        (typeof process !== 'undefined' && process.env?.NODE_ENV === 'production') ||
+        (typeof window !== 'undefined' &&
+          window.location?.hostname &&
+          !['localhost', '127.0.0.1', '0.0.0.0'].includes(window.location.hostname));
+
   if (!rawUrl || typeof rawUrl !== 'string') {
-    return '/api';
+    return isProd ? PRODUCTION_RENDER_API_URL : '/api';
   }
+
   const clean = rawUrl.trim().replace(/^["']|["']$/g, '').trim().replace(/\/+$/, '');
-  if (!clean || clean === '') {
-    return '/api';
+
+  if (!clean || clean === '' || clean === '/') {
+    return isProd ? PRODUCTION_RENDER_API_URL : '/api';
   }
+
+  // Reject frontend Vercel origin mistakenly supplied as API base URL
+  if (
+    clean.includes('vercel.app') ||
+    (typeof window !== 'undefined' &&
+      window.location?.origin &&
+      !['localhost', '127.0.0.1'].some((h) => window.location.hostname?.includes(h)) &&
+      clean.startsWith(window.location.origin))
+  ) {
+    return PRODUCTION_RENDER_API_URL;
+  }
+
+  // In production, relative '/api' would resolve to the static Vercel origin; reroute to Render
+  if (clean === '/api') {
+    return isProd ? PRODUCTION_RENDER_API_URL : '/api';
+  }
+
   if (clean.endsWith('/api')) {
     return clean;
   }
+
   return `${clean}/api`;
 };
+
 
