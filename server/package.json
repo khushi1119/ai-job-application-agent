@@ -7,7 +7,9 @@
   "scripts": {
     "start": "node src/server.js",
     "dev": "nodemon src/server.js",
-    "test": "node --test"
+    "test": "node --test",
+    "build": "node setup_ml.mjs",
+    "setup:ml": "node setup_ml.mjs"
   },
   "dependencies": {
     "@google/genai": "^2.24.0",

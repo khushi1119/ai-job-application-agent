@@ -53,10 +53,19 @@ export const resolvePythonExecutable = () => {
   }
 
   const venvBinaryName = process.platform === 'win32' ? 'Scripts/python.exe' : 'bin/python';
-  const candidatePath = path.resolve(__dirname, '../../../ml/.venv', venvBinaryName);
+  const candidatePaths = [
+    path.resolve(__dirname, '../../../ml/.venv', venvBinaryName),
+    path.resolve(__dirname, '../../../.venv', venvBinaryName),
+    path.resolve(__dirname, '../../.venv', venvBinaryName),
+    path.resolve(process.cwd(), '../ml/.venv', venvBinaryName),
+    path.resolve(process.cwd(), 'ml/.venv', venvBinaryName),
+    path.resolve(process.cwd(), '.venv', venvBinaryName),
+  ];
 
-  if (fs.existsSync(candidatePath)) {
-    return candidatePath;
+  for (const candidate of candidatePaths) {
+    if (fs.existsSync(candidate)) {
+      return candidate;
+    }
   }
 
   // Fallback to system python
@@ -67,7 +76,20 @@ export const resolvePythonExecutable = () => {
  * Resolves the absolute path to ml/recommender.py.
  */
 export const resolveRecommenderScript = () => {
-  return path.resolve(__dirname, '../../../ml/recommender.py');
+  if (process.env.RECOMMENDER_SCRIPT_PATH) {
+    return path.resolve(process.env.RECOMMENDER_SCRIPT_PATH);
+  }
+  const candidatePaths = [
+    path.resolve(__dirname, '../../../ml/recommender.py'),
+    path.resolve(process.cwd(), '../ml/recommender.py'),
+    path.resolve(process.cwd(), 'ml/recommender.py'),
+  ];
+  for (const candidate of candidatePaths) {
+    if (fs.existsSync(candidate)) {
+      return candidate;
+    }
+  }
+  return candidatePaths[0];
 };
 
 /**
@@ -242,12 +264,13 @@ export const prewarmPythonRecommender = () => {
 
   return new Promise((resolve) => {
     const pythonPath = resolvePythonExecutable();
-    const scriptPath = resolveRecommenderScript();
+    const scriptPath = path.resolve(resolveRecommenderScript());
 
     const child = spawn(pythonPath, [scriptPath], {
       shell: false,
       stdio: ['pipe', 'pipe', 'pipe'],
       windowsHide: true,
+      cwd: path.dirname(scriptPath),
     });
 
     const prewarmTimer = setTimeout(() => {
@@ -300,7 +323,7 @@ export const prewarmPythonRecommender = () => {
 export const invokePythonRecommender = (payload, options = {}) => {
   const timeoutMs = options.timeoutMs || DEFAULT_TIMEOUT_MS;
   const pythonPath = options.pythonPath || resolvePythonExecutable();
-  const scriptPath = options.scriptPath || resolveRecommenderScript();
+  const scriptPath = path.resolve(options.scriptPath || resolveRecommenderScript());
   const signal = options.signal;
 
   if (signal?.aborted) {
@@ -315,11 +338,12 @@ export const invokePythonRecommender = (payload, options = {}) => {
     let stderrData = '';
     let isSettled = false;
 
-    // Spawn Python subprocess with no shell
+    // Spawn Python subprocess with no shell and explicit cwd
     const child = spawn(pythonPath, [scriptPath], {
       shell: false,
       stdio: ['pipe', 'pipe', 'pipe'],
       windowsHide: true,
+      cwd: path.dirname(scriptPath),
     });
 
     const cleanup = () => {
