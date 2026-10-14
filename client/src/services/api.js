@@ -1,7 +1,15 @@
 import axios from 'axios';
 import { auth } from '../firebase/firebase.js';
+import { resolveApiBaseUrl } from '../utils/helpers.js';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '/api';
+const rawBaseUrl =
+  typeof import.meta !== 'undefined' && import.meta.env
+    ? import.meta.env.VITE_API_BASE_URL
+    : typeof process !== 'undefined' && process.env
+    ? process.env.VITE_API_BASE_URL
+    : undefined;
+
+export const API_BASE_URL = resolveApiBaseUrl(rawBaseUrl);
 
 /**
  * Pre-configured Axios instance for application-wide API communication
@@ -341,6 +349,7 @@ export const healthService = {
   check: () => api.get('/health'),
 };
 
+export { resolveApiBaseUrl };
 export default api;
 
 

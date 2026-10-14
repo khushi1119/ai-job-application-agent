@@ -242,3 +242,33 @@ export const formatJobFreshness = (lastVerifiedAt) => {
   }
 };
 
+/**
+ * Normalizes the API base URL to ensure requests correctly target the
+ * backend API root (e.g. appending '/api' if omitted).
+ * Handles:
+ *  - 'https://example.onrender.com' -> 'https://example.onrender.com/api'
+ *  - 'https://example.onrender.com/' -> 'https://example.onrender.com/api'
+ *  - 'https://example.onrender.com/api' -> 'https://example.onrender.com/api'
+ *  - 'https://example.onrender.com/api/' -> 'https://example.onrender.com/api'
+ *  - 'http://localhost:5000' -> 'http://localhost:5000/api'
+ *  - 'http://localhost:5000/api' -> 'http://localhost:5000/api'
+ *  - undefined / empty / '/' -> '/api'
+ *  - '/api' / '/api/' -> '/api'
+ *
+ * @param {string} [rawUrl] - Base URL configured in environment
+ * @returns {string} Normalized API base URL
+ */
+export const resolveApiBaseUrl = (rawUrl) => {
+  if (!rawUrl || typeof rawUrl !== 'string') {
+    return '/api';
+  }
+  const clean = rawUrl.trim().replace(/^["']|["']$/g, '').trim().replace(/\/+$/, '');
+  if (!clean || clean === '') {
+    return '/api';
+  }
+  if (clean.endsWith('/api')) {
+    return clean;
+  }
+  return `${clean}/api`;
+};
+
